@@ -83,6 +83,33 @@ async function resolveDenoCli(): Promise<string> {
   );
 }
 
+function shellQuote(arg: string): string {
+  if (/^[A-Za-z0-9_@%+=:,./-]+$/.test(arg)) {
+    return arg;
+  }
+  return `'${arg.replace(/'/g, `'\\''`)}'`;
+}
+
+function fileUrlToPath(url: string): string {
+  if (!url.startsWith("file:")) {
+    return url;
+  }
+  return decodeURIComponent(new URL(url).pathname);
+}
+
+/** Reconstruct how this process was invoked (deno run vs compiled binary). */
+function generationCommand(): string {
+  const quotedArgs = Deno.args.map(shellQuote).join(" ");
+  const base = Deno.execPath().split(/[/\\]/).pop() ?? "";
+
+  if (base === "deno" || base === "deno.exe") {
+    return `deno run -A ${shellQuote(fileUrlToPath(Deno.mainModule))} ${quotedArgs}`
+      .trimEnd();
+  }
+
+  return `${shellQuote(base)} ${quotedArgs}`.trimEnd();
+}
+
 function assertSelfContained(code: string): void {
   const fromRe =
     /\b(?:import|export)\s+(?:type\s+)?(?:[^'"\n]+?\s+from\s+)?["']([^"']+)["']/g;
@@ -176,6 +203,10 @@ try {
   }
 
   assertSelfContained(codeText);
+  await Deno.writeTextFile(
+    absoluteOut,
+    `// ${generationCommand()}\n` + codeText,
+  );
   console.log(`Localised ${pkg} → ${out}`);
 } catch (error) {
   console.error(error instanceof Error ? error.message : error);
