@@ -34,7 +34,7 @@ jobs:
 
       - name: Compile
         run: |
-          deno compile -A --no-config --target ${{ matrix.target }} \
+          deno compile -A --no-config --bundle --engine quickjs --target ${{ matrix.target }} \
             -o ${{ matrix.asset }} localise.ts
 
       - uses: actions/upload-artifact@v4
