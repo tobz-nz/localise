@@ -6,16 +6,37 @@ Pull an npm package **local** — one minified, self-contained browser ESM file.
 
 - [Deno](https://deno.land/) 2.5+ on your `PATH` (also used at runtime for `deno bundle`)
 
-## Install (compile from GitHub)
+## Install
 
-Replace `OWNER/REPO` with the GitHub repo once published:
+### Download (prebuilt)
+
+Grab the binary for your OS/arch from the [latest release](https://github.com/tobz-nz/localise/releases/latest):
+
+| Platform | Asset |
+| --- | --- |
+| macOS (Apple Silicon) | `localise-aarch64-apple-darwin` |
+| macOS (Intel) | `localise-x86_64-apple-darwin` |
+| Linux (x86_64) | `localise-x86_64-unknown-linux-gnu` |
+| Linux (arm64) | `localise-aarch64-unknown-linux-gnu` |
+| Windows (x86_64) | `localise-x86_64-pc-windows-msvc.exe` |
+
+Make it executable (Unix), put it on your `PATH`, and rename to `localise` if you like:
+
+```bash
+chmod +x localise-aarch64-apple-darwin
+mv localise-aarch64-apple-darwin ~/.local/bin/localise
+```
+
+You still need [Deno](https://deno.land/) 2.5+ on `PATH` at runtime (for `deno bundle`). If the CLI isn't findable, set `DENO=/path/to/deno`.
+
+### Compile from GitHub
 
 ```bash
 deno install -Agf --compile --no-config -n localise \
   https://raw.githubusercontent.com/tobz-nz/localise/main/localise.ts
 ```
 
-That downloads the source, compiles a binary, and puts `localise` on your Deno bin path (usually `~/.deno/bin` — ensure it’s on `PATH`).
+That downloads the source, compiles a binary, and puts `localise` on your Deno bin path (usually `~/.deno/bin` — ensure it's on `PATH`).
 
 **Or** compile to a local binary only:
 
@@ -31,8 +52,6 @@ deno compile -A --no-config -o localise localise.ts
 # or run without compiling:
 deno run -A localise.ts <npm-package> <output-path> [--default]
 ```
-
-Optional: set `DENO=/path/to/deno` if the Deno CLI isn’t findable on `PATH` when using the compiled binary.
 
 ## Usage
 
