@@ -32,6 +32,15 @@ jobs:
         with:
           deno-version: v2.x
 
+      - name: Bake version from tag
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          printf '%s\n' \
+            '/** Baked at release from the git tag (v1.2.3 → 1.2.3). Dev / source runs stay "dev". */' \
+            "export const LOCALISE_VERSION = \"${VERSION}\";" \
+            > version.ts
+          cat version.ts
+
       - name: Compile
         run: |
           deno compile -A --no-config --bundle --engine quickjs --target ${{ matrix.target }} \
