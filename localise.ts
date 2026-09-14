@@ -8,7 +8,8 @@
  *
  * Examples:
  *   deno run -A localise.ts '@flareapp/js@^2.12' public/store/js/flare@2.12.js
- *   deno run -A localise.ts lodash-es@4 public/js/lodash.js --default
+ *   deno run -A localise.ts lodash-es@4 public/js --default
+ *   # → public/js/lodash-es@4.js when output path has no .js suffix
  */
 
 import { LOCALISE_VERSION } from "./version.ts";
@@ -112,7 +113,6 @@ function generationCommand(): string {
   return `${shellQuote(base)} ${quotedArgs}`.trimEnd();
 }
 
-
 /** Strip npm: prefix and version range → package name (`@scope/name` or `name`). */
 function npmPackageName(spec: string): string {
   const s = spec.startsWith("npm:") ? spec.slice(4) : spec;
@@ -122,6 +122,39 @@ function npmPackageName(spec: string): string {
   }
   const at = s.indexOf("@");
   return at === -1 ? s : s.slice(0, at);
+}
+
+/** Version / tag from a specifier, if any (`lodash-es@4` → `4`, `@scope/pkg@^2.12` → `^2.12`). */
+function npmPackageVersion(spec: string): string | null {
+  const s = spec.startsWith("npm:") ? spec.slice(4) : spec;
+  if (s.startsWith("@")) {
+    const secondAt = s.indexOf("@", 1);
+    return secondAt === -1 ? null : s.slice(secondAt + 1) || null;
+  }
+  const at = s.indexOf("@");
+  return at === -1 ? null : s.slice(at + 1) || null;
+}
+
+/** Package specifier → safe `.js` basename (`@flareapp/js@^2.12` → `flareapp-js@2.12.js`). */
+function defaultFilenameFromPackage(pkg: string): string {
+  const name = npmPackageName(pkg);
+  const base = name.startsWith("@") ? name.slice(1).replace("/", "-") : name;
+  const rawVersion = npmPackageVersion(pkg);
+  if (!rawVersion) {
+    return `${base}.js`;
+  }
+  // Drop range operators so filenames match common vendor style (`flare@2.12.js`).
+  const version = rawVersion.replace(/^(?:\^|~|>=|<=|>|<|=)+/, "");
+  return `${base}@${version || rawVersion}.js`;
+}
+
+/** If `out` is a directory (no `.js` suffix), append `<package-name>.js`. */
+function withDefaultFilename(out: string, pkg: string): string {
+  if (out.endsWith(".js")) {
+    return out;
+  }
+  const dir = out.endsWith("/") || out.endsWith("\\") ? out : `${out}/`;
+  return `${dir}${defaultFilenameFromPackage(pkg)}`;
 }
 
 async function resolvedPackageVersion(
@@ -186,7 +219,8 @@ function assertSelfContained(code: string): void {
   }
 }
 
-const { pkg, out, asDefault } = parseArgs(Deno.args);
+const { pkg, out: outArg, asDefault } = parseArgs(Deno.args);
+const out = withDefaultFilename(outArg, pkg);
 const npmSpec = pkg.startsWith("npm:") ? pkg : `npm:${pkg}`;
 const entrySource = asDefault
   ? `export { default } from ${JSON.stringify(npmSpec)};\n`
